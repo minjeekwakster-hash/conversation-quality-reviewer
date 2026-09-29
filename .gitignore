@@ -1,0 +1,9 @@
+venv/
+__pycache__/
+*.pyc
+.env
+data/abcd_v1.1.json.gz
+data/abcd_v1.1.json
+data/utterances.json
+data/_abcd_repo/
+.DS_Store
