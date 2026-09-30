@@ -48,10 +48,38 @@ Living document — updated as we build.
 - **Rationale**: In regulated industries (ASAPP's customers: airlines, insurance), resolution and compliance are non-negotiable. Efficiency/sentiment/communication are "how well" you did it. Weights are configurable per customer — an airline might weight compliance higher, a retail brand might weight sentiment higher.
 - **What we'd say**: "These are defaults. In production, weights are customer-configurable."
 
+### Where "good" is defined vs. left to calibration
+- **The case study prompt asks**: "Someone has to decide what 'good' looks like before any of it can be automated or reported on." Our 5 signals answer this at two different levels of groundedness — and the gap is intentional.
+- **Grounded signals (Efficiency, Compliance)**: These explicitly define "good" with concrete thresholds and formulas.
+  - *Efficiency*: "Good" = turn count at or below subflow baseline (ratio ≤1.0), substantive turn ratio near 100%, agent:customer turn ratio between 0.8–1.3, action count within ±20% of baseline. A QA Manager can look at these numbers and say "I agree" or "I disagree" with specific values.
+  - *Compliance*: "Good" = agent followed the expected action sequence from kb.json. Scored via completeness (50%), precision (30%), sequence order (10%), base (10%). Deviations are flagged; the LLM layer determines if deviations were justified. This is the most defensible signal because it's anchored to documented policy.
+- **Uncalibrated signals (Resolution, Sentiment, Communication)**: These define scoring dimensions and evaluation criteria in their LLM prompts, but don't anchor what specific score levels (e.g., 0.3 vs. 0.7) look like with concrete examples.
+  - *Resolution*: Prompt says "0=unresolved, 0.5=partial, 1.0=fully resolved" — but what counts as "partial"? If the agent processed a refund but didn't confirm the timeline, is that 0.5 or 0.7?
+  - *Sentiment*: "1.0 = customer stayed happy, 0.0 = frustrated and never recovered" — but a customer who starts frustrated, gets resolved, and ends neutral could be 0.6 or 0.8 depending on the rubric.
+  - *Communication*: Has 4 sub-dimensions with guiding questions (best of the three), but still no anchored examples per score level.
+- **Why the gap is intentional**: Calibrating LLM-judged signals requires annotated examples from the customer's QA team — "this is what a 0.7 Resolution looks like at JetBlue." That's a customer onboarding activity, not a prototype feature. The prototype demonstrates the scoring mechanism; calibration is the business process that tunes it.
+- **What production calibration looks like**:
+  1. *Grounded rubrics*: Each score level gets 2–3 annotated example conversations, embedded as few-shot examples in the LLM prompt.
+  2. *Weight configuration*: Signal weights become customer-configurable (JetBlue might weight Compliance at 40% for DOT regulations).
+  3. *Calibration loop*: QA Managers review a sample, flag disagreements, and those become training data. Measure Cohen's kappa between LLM judge and human reviewer. Below 0.6 kappa = rubric needs revision.
+  4. *Threshold-setting*: "Above Bar" at 0.80 is meaningless until a customer says "80% of our conversations should score above this line." That's a business SLA, not a default.
+- **Why this matters for ASAPP**: The two grounded signals prove we *can* define "good" concretely. The three uncalibrated signals show we understand the mechanism but intentionally left calibration as a customer-facing process — because that's what CoachingAI does (moving QA managers from evaluating to defining standards).
+
 ### Why hybrid for compliance (but not others)?
 - **Decision**: Compliance uses heuristic first (action sequence matching from kb.json), then LLM to adjust ±0.2
 - **Alternatives**: Pure LLM (expensive, slow), pure heuristic (misses nuance like justified deviations)
 - **Rationale**: Shows cost/speed awareness. The heuristic catches 80% of compliance issues (wrong action order, missing steps). The LLM handles the 20% that requires judgment (e.g., agent skipped a step but for a valid reason). This is the kind of tiered approach a production system would use.
+
+### Why hard blocks only on Resolution and Compliance (not all 5 signals)?
+- **Decision**: Only Resolution < 0.50 or Compliance < 0.50 triggers a hard block (mandatory review, sorted to top of queue). Low Sentiment, Communication, or Efficiency do not.
+- **Rationale**: Hard blocks mean "drop everything and review this now." That's the right response for:
+  - **Resolution failure** — the customer's problem wasn't solved. They'll call back, escalate, or churn. That's a fire.
+  - **Compliance failure** — the agent skipped identity verification, gave wrong refund info, or violated policy. That's legal/regulatory risk, especially for ASAPP's customers (airlines, insurance, banks).
+- **Why the other three don't qualify**:
+  - *Sentiment < 0.50* — the customer was unhappy. Bad, but not an emergency. It's a coaching opportunity for the next 1:1, not something the QA Manager needs to triage at 7:30 AM.
+  - *Communication < 0.50* — the agent was unclear or lacked empathy. Same — coaching, not triage.
+  - *Efficiency < 0.50* — the call took too many turns. That's a process or training issue, not a specific conversation requiring immediate attention.
+- **The design principle**: "Did something go wrong that needs to be fixed right now?" (hard block) vs. "Is there a pattern we should coach on over time?" (flag). If all 5 signals triggered hard blocks, the queue would be flooded and the concept would lose meaning. Hard blocks work because they're rare and urgent.
 
 ### Why single API call per signal (not per-turn)?
 - **Decision**: Each LLM signal makes ONE Claude API call per conversation, not one per turn
@@ -65,6 +93,14 @@ Living document — updated as we build.
 ---
 
 ## Architecture
+
+### Why batch review, not streaming (and how it complements ASAPP's cascade)?
+- **Decision**: Build a batch post-call quality reviewer, not a real-time streaming scorer
+- **Alternatives**: Real-time scoring during the call, hybrid (real-time flags + batch deep analysis)
+- **Rationale**: The use case is QA review — the QA Manager reviews conversations *after* they happen, identifies patterns, and makes coaching/process decisions. That's inherently batch. Real-time scoring serves a different user (the supervisor monitoring live calls) and a different decision ("intervene now" vs. "coach tomorrow").
+- **ASAPP context**: ASAPP's streaming cascade already handles real-time — guardrails, compliance checks, escalation triggers, all running during the call. This quality reviewer is the complementary post-call layer. The same signals can serve both: compliance action-sequence matching can run in real-time as a guardrail *and* post-call for the quality score. The LLM judgment layer is batch-only because it needs full conversation context, which you only have after the call ends.
+- **Integration pattern**: Conversations flow through the streaming cascade during the call. After the call ends, transcripts land in storage. The quality reviewer picks them up asynchronously — batch on a schedule, or event-driven for near-real-time scoring. Scores flow into the Supervisor Suite, customer analytics, or BI tools.
+- **What to say**: "Batch and streaming aren't competing — they're complementary layers serving different decisions at different timescales. Real-time prevents harm in the moment. Batch finds patterns that drive systemic improvement. I built batch because the QA Manager's workflow is batch."
 
 ### Why FastAPI + Streamlit (not a single app)?
 - **Decision**: Separate FastAPI backend (the API) + Streamlit frontend (the dashboard)
@@ -208,26 +244,33 @@ maturity and production thinking.
 
 ## Dashboard UX Decisions (Polish Pass)
 
-### Why "Coaching Pattern Map" instead of "Resolution vs. Compliance"?
-- **Decision**: Renamed the Resolution-vs-Compliance scatter plot to "Coaching Pattern Map" and added explanatory text above it.
-- **Rationale**: The original title described the axes, not the insight. The value of this chart is that it reveals **coaching archetypes**:
-  - **Top-right** (high resolution + high compliance) = Ideal. No action needed.
-  - **Bottom-right** (high compliance + low resolution) = "By-the-book" agents who follow rules but can't solve problems. Fix: better troubleshooting training.
-  - **Top-left** (high resolution + low compliance) = "Cowboys" who solve problems but break rules. **This is the most dangerous quadrant** in regulated industries (airlines, insurance) — the customer is happy but the company is exposed to legal risk.
-  - **Bottom-left** = Needs immediate coaching.
-- The name "Coaching Pattern Map" tells the QA Manager what to do with the chart before they even look at it.
+### Why "Failure Pattern Map" instead of "Resolution vs. Compliance"?
+- **Decision**: Renamed the Resolution-vs-Compliance scatter plot to "Failure Pattern Map" with quadrant shading, actionable labels, and per-quadrant counts.
+- **Rationale**: The original title described the axes, not the insight. The value of this chart is that it reveals **failure patterns by call reason** (since the ABCD dataset lacks agent IDs, dots are conversations, not agents):
+  - **Top-right** (high resolution + high compliance) = No action needed.
+  - **Bottom-right** (high compliance + low resolution) = Resolution gap → improve tools / knowledge base.
+  - **Top-left** (high resolution + low compliance) = Policy gap → update process / retrain on policy. **Most dangerous quadrant** in regulated industries — the customer is happy but the company is exposed.
+  - **Bottom-left** = Both failing → escalate / investigate root cause.
+- Each quadrant label includes the **action** ("→ improve tools / knowledge base"), not just the diagnosis. Quadrant counts and auto-generated insight ("Top pattern: 28 flagged conversations in Manage Account") give the QA Manager a clear next step.
+- **Why not "Coaching Pattern Map"**: Without agent IDs, this can't show coaching targets per agent. Reframing as "Failure Pattern Map" is honest about what the data supports. In production with agent IDs, this becomes the coaching prioritization view — a great "talk about" point.
 
-### Why Score Distribution histogram with tier zone percentages?
-- **Decision**: Added contextual interpretation above the histogram and a 3-column summary showing percentage of conversations in each tier (Above Bar / Marginal / Below Bar).
-- **Rationale**: The histogram tells the QA Manager whether quality issues are **systemic or isolated**:
-  - Distribution skewed right (most scores >0.80) = healthy center, just a few bad calls to triage individually
-  - Distribution flat or bimodal = inconsistent quality, systemic training issue
-  - Distribution skewed left = everything is broken, escalate to ops leadership
-- Without the tier percentages, the QA Manager has to mentally estimate proportions from the histogram bars. The numbers save them the work.
+### Why Quality Trend line chart (replaced Score Distribution histogram)?
+- **Decision**: Replaced the Score Distribution histogram with a Quality Trend line chart showing daily average quality score over time, with threshold lines and an auto-generated trend insight.
+- **Rationale**: The histogram was descriptive but not actionable — it duplicated the KPI cards (tier counts) without telling the QA Manager what to *do*. The histogram answered "what's the shape of our distribution?" which is a data science question, not a QA Manager question. The Quality Trend chart answers "are we getting better or worse?" — one of the QA Manager's core daily questions:
+  - Sustained dip → investigate what changed (new policy? new agents? broken workflow?)
+  - Improving trend → training or process changes are working
+  - Stable → no action needed
+- Auto-generated insight below the chart compares last 3 days vs. prior period and states the verdict, so the QA Manager doesn't have to interpret the chart visually.
 
 ### Why emoji + text instead of progress bars for Quality Score?
 - **Decision**: Replaced `st.column_config.ProgressColumn` with a formatted text column showing `🟢 0.85` / `🟡 0.72` / `🔴 0.45`.
 - **Rationale**: Streamlit's `ProgressColumn` doesn't support conditional colors — all bars render in the same default color (pink/red). This made "Above Bar" conversations look identical to "Below Bar" ones, defeating the purpose. The emoji + number format is actually more scannable for triage — QA Managers scan for red/yellow first, then look at the number. This matches the tier system used everywhere else in the dashboard.
+
+### Why ±0.02 trend stability band (not ±0.05)?
+- **Decision**: Trend arrows show when quality shifts more than ±0.02 between periods. Anything within that band shows "— stable."
+- **Why 0.02, not 0.05**: Demo-driven. With ~20 conversations per flow and simulated prior-period data, a 0.05 band suppresses nearly every trend — the column would read "— stable" for every row and the feature would look dead during the demo. 0.02 keeps the trend column visually active so the panel can see how it works.
+- **Why this is wrong for production**: At scale (thousands of conversations per flow), a 0.02 shift is normal variance, not a signal worth acting on. The right approach isn't a hardcoded band at all — it's a statistical significance test based on sample size and confidence intervals. A flow with 20 conversations needs a much wider band than a flow with 2,000.
+- **What to say**: "The stability band is intentionally tight for the demo so you can see the feature in action. In production, I'd replace the fixed band with a significance test — the threshold adapts to sample size so you only see trends that are statistically meaningful, not noise."
 
 ### Why sortable flow table?
 - **Decision**: Added a sort toggle above the Quality by Flow table with three options: Quality (low→high), Flagged % (high→low), Hard Blocks (high→low).

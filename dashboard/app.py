@@ -181,7 +181,6 @@ def results_to_df(results: list[ConversationResult]) -> pd.DataFrame:
 
 # --- Load data ---
 results = load_precomputed_results()
-transcripts = load_transcripts()
 
 if not results:
     st.warning(
@@ -189,8 +188,12 @@ if not results:
     )
     st.stop()
 
-all_df = results_to_df(results)
-results_dict = {r.convo_id: r for r in results}
+if "all_df" not in st.session_state:
+    st.session_state.all_df = results_to_df(results)
+all_df = st.session_state.all_df
+if "results_dict" not in st.session_state:
+    st.session_state.results_dict = {r.convo_id: r for r in results}
+results_dict = st.session_state.results_dict
 
 # --- Sidebar ---
 st.sidebar.title("Quality Reviewer")
@@ -202,6 +205,11 @@ if "nav_from_summary" not in st.session_state:
     st.session_state.nav_from_summary = False
 if "view_radio" not in st.session_state:
     st.session_state.view_radio = "Quality Summary"
+
+# Process pending navigation (must happen BEFORE the radio widget is instantiated)
+if st.session_state.get("_pending_view"):
+    st.session_state.view_radio = st.session_state._pending_view
+    del st.session_state._pending_view
 
 def _on_view_change():
     """When user manually switches view via radio, clear cross-nav state."""
@@ -265,7 +273,8 @@ selected_flow = st.sidebar.selectbox("Filter by Call Reason", ["All Call Reasons
 # Apply flow filter on top of time filter
 df = time_filtered_df if selected_flow == "All Call Reasons" else time_filtered_df[time_filtered_df["flow"] == selected_flow]
 prior_period_df = prior_df if selected_flow == "All Call Reasons" else prior_df[prior_df["flow"] == selected_flow] if not prior_df.empty else pd.DataFrame()
-filtered_results = [r for r in results if r.convo_id in set(df["convo_id"])]
+_filtered_ids = set(df["convo_id"])
+filtered_results = [r for r in results if r.convo_id in _filtered_ids]
 
 # --- Judge Info (sidebar) ---
 st.sidebar.divider()
@@ -291,7 +300,7 @@ st.sidebar.caption(
 # --- API Reference ---
 st.sidebar.divider()
 with st.sidebar.expander("API Reference"):
-    st.sidebar.markdown(
+    st.markdown(
         "**Base URL**: `http://localhost:8000`\n\n"
         "| Endpoint | Method | Description |\n"
         "|----------|--------|-------------|\n"
@@ -394,7 +403,14 @@ def _show_conversation_detail(result: ConversationResult, convo):
             score_obj = result.scores[signal.value]
             emoji, label = tier_status(score_obj.score)
             is_hard = signal.value in HARD_BLOCK_SIGNALS
-            gate_label = "Hard Block" if is_hard else "Warning"
+
+            # Show gate status based on actual score, not just signal type
+            if score_obj.score >= ABOVE_BAR:
+                gate_label = "Above Bar"
+            elif score_obj.score >= MARGINAL_LOW:
+                gate_label = "Warning"
+            else:
+                gate_label = "Hard Block" if is_hard else "Below Bar"
 
             st.markdown(
                 f"**{SIGNAL_LABELS[signal.value]}** · "
@@ -593,7 +609,7 @@ def _show_conversation_detail(result: ConversationResult, convo):
                 if comm_score and comm_score.flagged_utterances:
                     for fu in comm_score.flagged_utterances:
                         if text[:30] in fu:
-                            flag_annotation = "<br><span style='color:#e74c3c;font-size:0.8em;'>⚠️ Flagged: " + fu.split(": ", 1)[-1][:80] + "</span>"
+                            flag_annotation = "<br><span style='color:#e74c3c;font-size:0.8em;'>⚠️ Flagged: " + fu.split(": ", 1)[-1] + "</span>"
 
             st.markdown(
                 f"<div style='padding:6px 10px;margin:2px 0;border-radius:4px;{bg_style}'>"
@@ -690,7 +706,7 @@ def _build_quality_table(
             "Quality_sort": avg_overall,
             "Trend": trend_display,
             "Trend_sort": trend_sort,
-            "Biggest Gap": primary_issue,
+            "Weakest Signal": primary_issue,
             "Biggest_gap_signal": weakest_signal_key,
             "Hard Blocks": f"🔴 {hb_count}" if hb_count > 0 else "—",
             "HB_sort": hb_count,
@@ -818,7 +834,9 @@ if view == "Quality Summary":
         "Biggest Decline",
     ]
     sort_by = st.selectbox("Sort by", sort_options, index=0)
-    if sort_by == "Flagged % (high → low)":
+    if quality_table.empty:
+        st.info("No conversations found for this time window.")
+    elif sort_by == "Flagged % (high → low)":
         quality_table = quality_table.sort_values("Flagged_pct", ascending=False)
     elif sort_by == "Hard Blocks (high → low)":
         quality_table = quality_table.sort_values("HB_sort", ascending=False)
@@ -837,16 +855,16 @@ if view == "Quality Summary":
         hide_index=True,
         column_config={
             "Quality": st.column_config.TextColumn(
-                "Quality Score",
+                "Avg Quality Score",
                 help="Weighted average across all signals. 🟢 ≥0.80, 🟡 0.50–0.79, 🔴 <0.50",
             ),
             "Trend": st.column_config.TextColumn(
                 "Trend",
                 help="Quality score change vs. prior period. 🟢▲ = improving, 🔴▼ = declining, — = stable (±0.02)",
             ),
-            "Biggest Gap": st.column_config.TextColumn(
-                "Biggest Gap",
-                help=f"The lowest-scoring signal for this {group_label.lower()} — where to focus improvement",
+            "Weakest Signal": st.column_config.TextColumn(
+                "Weakest Signal",
+                help=f"The lowest avg signal score for this {group_label.lower()} — where to focus improvement",
             ),
             "Hard Blocks": st.column_config.TextColumn(
                 "Hard Blocks",
@@ -860,7 +878,7 @@ if view == "Quality Summary":
     )
 
     # --- Cross-View Navigation: Click a row to jump to Review Queue ---
-    if not is_filtered:
+    if not is_filtered and not quality_table.empty:
         st.caption("Click a call reason below to jump to its flagged conversations in the Review Queue.")
         nav_cols = st.columns(min(len(quality_table), 5))
         for i, (_, row) in enumerate(quality_table.iterrows()):
@@ -876,22 +894,14 @@ if view == "Quality Summary":
             if hb > 0:
                 btn_label += f" (🔴 {int(hb)})"
             elif flagged_pct > 0:
-                btn_label += f" ({flagged_pct:.0f}%)"
+                btn_label += f" (⚠️ {flagged_pct:.0f}%)"
 
             with nav_cols[col_idx]:
                 if st.button(btn_label, key=f"nav_{raw_group}", use_container_width=True):
                     # Navigate to Review Queue filtered by this flow + signal
-                    st.session_state.view_radio = "Review Queue"
+                    st.session_state._pending_view = "Review Queue"
                     st.session_state.nav_from_summary = True
-                    # Map gap signal to flag filter
-                    signal_to_filter = {
-                        "resolution": "Resolution flags",
-                        "compliance": "Compliance flags",
-                        "sentiment": "Sentiment flags",
-                        "communication": "Communication flags",
-                        "efficiency": "Efficiency flags",
-                    }
-                    st.session_state.nav_signal_filter = signal_to_filter.get(gap_signal, "All signals")
+                    st.session_state.nav_signal_filter = "All signals"
                     st.session_state.nav_flow = raw_group
                     st.rerun()
 
@@ -1011,65 +1021,167 @@ if view == "Quality Summary":
     col1, col2 = st.columns(2)
 
     with col1:
-        st.subheader("Score Distribution")
+        st.subheader("Quality Trend")
         st.caption(
-            "How quality scores are distributed across all conversations. "
-            "A healthy center clusters right of the green line. Scores spread "
-            "across the full range indicate inconsistent quality — a systemic issue."
+            "Is quality improving or declining? Each point is the daily average quality score. "
+            "Sustained dips signal systemic issues that need investigation."
         )
 
-        # Tier zone summary
-        n_total = len(df)
-        n_above = int((df["overall"] >= ABOVE_BAR).sum())
-        n_marginal = int(((df["overall"] >= MARGINAL_LOW) & (df["overall"] < ABOVE_BAR)).sum())
-        n_below = int((df["overall"] < MARGINAL_LOW).sum())
-        t1, t2, t3 = st.columns(3)
-        t1.markdown(f"🟢 **Above Bar**: {n_above} ({n_above/n_total:.0%})")
-        t2.markdown(f"🟡 **Marginal**: {n_marginal} ({n_marginal/n_total:.0%})")
-        t3.markdown(f"🔴 **Below Bar**: {n_below} ({n_below/n_total:.0%})")
+        if "scored_at" in df.columns and df["scored_at"].notna().any() and len(df) > 0:
+            trend_df = df.copy()
+            trend_df["date"] = trend_df["scored_at"].dt.date
 
-        fig = px.histogram(
-            df, x="overall", nbins=20,
-            color_discrete_sequence=["#3498db"],
-            labels={"overall": "Overall Score", "count": "Conversations"},
-        )
-        fig.add_vline(x=ABOVE_BAR, line_dash="dash", line_color="green", opacity=0.5)
-        fig.add_vline(x=MARGINAL_LOW, line_dash="dash", line_color="red", opacity=0.5)
-        fig.update_layout(showlegend=False, height=320, margin=dict(l=20, r=20, t=30, b=20))
-        st.plotly_chart(fig, use_container_width=True)
+            daily = trend_df.groupby("date").agg(
+                avg_quality=("overall", "mean"),
+                n_convos=("overall", "count"),
+                flagged=("flag_count", lambda x: (x > 0).sum()),
+            ).reset_index()
+            daily["date"] = pd.to_datetime(daily["date"])
+            daily["flagged_pct"] = (daily["flagged"] / daily["n_convos"] * 100).round(1)
+
+            # Quality trend line
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=daily["date"], y=daily["avg_quality"],
+                mode="lines+markers", name="Avg Quality",
+                line=dict(color="#3498db", width=2),
+                marker=dict(size=5),
+                customdata=daily[["n_convos", "flagged_pct"]].values,
+                hovertemplate=(
+                    "%{x|%b %d}<br>"
+                    "Quality: %{y:.2f}<br>"
+                    "Conversations: %{customdata[0]}<br>"
+                    "Flagged: %{customdata[1]:.0f}%<extra></extra>"
+                ),
+            ))
+
+            # Threshold lines
+            fig.add_hline(y=ABOVE_BAR, line_dash="dash", line_color="green", opacity=0.4,
+                          annotation_text="Above Bar", annotation_position="top left",
+                          annotation_font_size=9)
+            fig.add_hline(y=MARGINAL_LOW, line_dash="dash", line_color="red", opacity=0.4,
+                          annotation_text="Below Bar", annotation_position="bottom left",
+                          annotation_font_size=9)
+
+            fig.update_layout(
+                yaxis=dict(title="Avg Quality Score", range=[0, 1.05]),
+                xaxis=dict(title=""),
+                height=320, margin=dict(l=20, r=20, t=30, b=20),
+                showlegend=False,
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+            # Actionable summary
+            if len(daily) >= 3:
+                recent_3 = daily.tail(3)["avg_quality"].mean()
+                prior = daily.iloc[:-3]["avg_quality"].mean() if len(daily) > 3 else recent_3
+                delta = recent_3 - prior
+                if delta < -0.03:
+                    st.caption(f"🔴 **Quality dropped {abs(delta):.2f}** in the last 3 days vs. prior period — investigate recent conversations.")
+                elif delta > 0.03:
+                    st.caption(f"🟢 **Quality improved {delta:.2f}** in the last 3 days vs. prior period.")
+                else:
+                    st.caption("Quality has been **stable** over the selected period.")
+        else:
+            st.info("No timestamp data available for trend analysis.")
 
     with col2:
-        st.subheader("Coaching Pattern Map")
+        st.subheader("Failure Pattern Map")
         st.caption(
-            "Each dot is a conversation. The quadrants reveal coaching patterns: "
-            "top-right = ideal, bottom-right = follows rules but doesn't resolve, "
-            "top-left = resolves but breaks rules (compliance risk), bottom-left = needs coaching."
+            "Where are conversations failing — resolution, compliance, or both? "
+            "Clusters reveal systemic issues by call reason. Scattered dots suggest individual variance."
         )
         if "resolution" in df.columns and "compliance" in df.columns:
             scatter_df = df.dropna(subset=["resolution", "compliance"])
             if not scatter_df.empty:
-                fig = px.scatter(
-                    scatter_df, x="compliance", y="resolution",
-                    color="flow", hover_data=["convo_id", "subflow", "overall"],
-                    labels={"compliance": "Policy Compliance", "resolution": "Resolution"},
-                    opacity=0.7,
+                fig = go.Figure()
+
+                # Quadrant background shading
+                # Bottom-left: Both failing (red)
+                fig.add_shape(type="rect", x0=0, x1=0.5, y0=0, y1=0.5,
+                              fillcolor="rgba(231, 76, 60, 0.08)", line_width=0)
+                # Top-left: Policy gap (orange)
+                fig.add_shape(type="rect", x0=0, x1=0.5, y0=0.5, y1=1,
+                              fillcolor="rgba(243, 156, 18, 0.08)", line_width=0)
+                # Bottom-right: Resolution gap (yellow)
+                fig.add_shape(type="rect", x0=0.5, x1=1, y0=0, y1=0.5,
+                              fillcolor="rgba(243, 156, 18, 0.06)", line_width=0)
+                # Top-right: No action needed (green)
+                fig.add_shape(type="rect", x0=0.5, x1=1, y0=0.5, y1=1,
+                              fillcolor="rgba(46, 204, 113, 0.08)", line_width=0)
+
+                # Scatter dots by flow
+                for flow_val in sorted(scatter_df["flow"].unique()):
+                    flow_df = scatter_df[scatter_df["flow"] == flow_val]
+                    fig.add_trace(go.Scatter(
+                        x=flow_df["compliance"], y=flow_df["resolution"],
+                        mode="markers", name=flow_val.replace("_", " ").title(),
+                        marker=dict(size=7, opacity=0.7),
+                        customdata=flow_df[["convo_id", "subflow", "overall"]].values,
+                        hovertemplate=(
+                            "ID: %{customdata[0]}<br>"
+                            "Subflow: %{customdata[1]}<br>"
+                            "Compliance: %{x:.2f}<br>"
+                            "Resolution: %{y:.2f}<br>"
+                            "Overall: %{customdata[2]:.2f}<extra></extra>"
+                        ),
+                    ))
+
+                # Quadrant dividers
+                fig.add_hline(y=0.5, line_dash="dash", line_color="gray", opacity=0.5)
+                fig.add_vline(x=0.5, line_dash="dash", line_color="gray", opacity=0.5)
+
+                # Quadrant labels — positioned in corners, framed as actions
+                fig.add_annotation(x=0.02, y=0.98, text="⚠️ Policy gap<br>→ update process / retrain on policy",
+                                   showarrow=False, font=dict(size=10, color="#e67e22"),
+                                   xanchor="left", yanchor="top", xref="x", yref="y")
+                fig.add_annotation(x=0.98, y=0.98, text="✅ No action needed",
+                                   showarrow=False, font=dict(size=10, color="#27ae60"),
+                                   xanchor="right", yanchor="top", xref="x", yref="y")
+                fig.add_annotation(x=0.02, y=0.02, text="🔴 Both failing<br>→ escalate / investigate root cause",
+                                   showarrow=False, font=dict(size=10, color="#e74c3c"),
+                                   xanchor="left", yanchor="bottom", xref="x", yref="y")
+                fig.add_annotation(x=0.98, y=0.02, text="📋 Resolution gap<br>→ improve tools / knowledge base",
+                                   showarrow=False, font=dict(size=10, color="#f39c12"),
+                                   xanchor="right", yanchor="bottom", xref="x", yref="y")
+
+                # Count per quadrant
+                n_ideal = int(((scatter_df["compliance"] >= 0.5) & (scatter_df["resolution"] >= 0.5)).sum())
+                n_cowboy = int(((scatter_df["compliance"] < 0.5) & (scatter_df["resolution"] >= 0.5)).sum())
+                n_book = int(((scatter_df["compliance"] >= 0.5) & (scatter_df["resolution"] < 0.5)).sum())
+                n_coach = int(((scatter_df["compliance"] < 0.5) & (scatter_df["resolution"] < 0.5)).sum())
+
+                fig.update_layout(
+                    xaxis=dict(title="Policy Compliance →", range=[-0.02, 1.02]),
+                    yaxis=dict(title="Resolution →", range=[-0.02, 1.02]),
+                    height=360, margin=dict(l=20, r=20, t=30, b=20),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
                 )
-                fig.add_hline(y=0.5, line_dash="dash", line_color="gray", opacity=0.4)
-                fig.add_vline(x=0.5, line_dash="dash", line_color="gray", opacity=0.4)
-                fig.add_annotation(x=0.25, y=0.95, text="⚠️ Cowboys<br>(compliance risk)",
-                                   showarrow=False, font=dict(size=9, color="#e74c3c"))
-                fig.add_annotation(x=0.75, y=0.95, text="✅ Ideal",
-                                   showarrow=False, font=dict(size=9, color="#2ecc71"))
-                fig.add_annotation(x=0.25, y=0.05, text="🔴 Needs coaching",
-                                   showarrow=False, font=dict(size=9, color="#e74c3c"))
-                fig.add_annotation(x=0.75, y=0.05, text="📋 By-the-book<br>but ineffective",
-                                   showarrow=False, font=dict(size=9, color="#f39c12"))
-                fig.update_layout(height=320, margin=dict(l=20, r=20, t=30, b=20))
                 st.plotly_chart(fig, use_container_width=True)
+
+                # Quadrant counts as a quick summary
+                q1, q2, q3, q4 = st.columns(4)
+                q1.metric("✅ No action", n_ideal)
+                q2.metric("⚠️ Policy gap", n_cowboy)
+                q3.metric("📋 Resolution gap", n_book)
+                q4.metric("🔴 Both failing", n_coach)
+
+                # Actionable insight: which call reason has the worst cluster?
+                if n_coach + n_cowboy + n_book > 0:
+                    problem_df = scatter_df[
+                        (scatter_df["compliance"] < 0.5) | (scatter_df["resolution"] < 0.5)
+                    ]
+                    worst_flow = problem_df["flow"].value_counts().index[0]
+                    worst_count = problem_df["flow"].value_counts().iloc[0]
+                    worst_label = worst_flow.replace("_", " ").title()
+                    st.caption(
+                        f"**Top pattern:** {worst_count} flagged conversations in **{worst_label}** — "
+                        f"click the call reason in the table above to review them."
+                    )
             else:
-                st.info("Run LLM scoring to see the Coaching Pattern Map.")
+                st.info("Run LLM scoring to see the Failure Pattern Map.")
         else:
-            st.info("Run LLM scoring to see the Coaching Pattern Map.")
+            st.info("Run LLM scoring to see the Failure Pattern Map.")
 
 
 # =====================================================
@@ -1084,7 +1196,8 @@ elif view == "Review Queue":
     # If we arrived here via a cross-view click, override the flow filter
     if st.session_state.nav_from_summary and hasattr(st.session_state, "nav_flow"):
         nav_flow = st.session_state.nav_flow
-        cross_view_results = [r for r in results if r.convo_id in set(time_filtered_df["convo_id"]) and r.flow == nav_flow]
+        _time_ids = set(time_filtered_df["convo_id"])
+        cross_view_results = [r for r in results if r.convo_id in _time_ids and r.flow == nav_flow]
     else:
         cross_view_results = filtered_results
 
@@ -1121,6 +1234,7 @@ elif view == "Review Queue":
                 st.rerun()
 
             result = results_dict[selected_id]
+            transcripts = load_transcripts()
             convo = transcripts.get(selected_id)
             st.markdown(f"## Conversation #{selected_id}")
             _show_conversation_detail(result, convo)
@@ -1142,7 +1256,7 @@ elif view == "Review Queue":
                 f"(filtered from Quality Summary — {st.session_state.nav_signal_filter})"
             )
             if st.button("← Back to Summary"):
-                st.session_state.view_radio = "Quality Summary"
+                st.session_state._pending_view = "Quality Summary"
                 st.session_state.nav_from_summary = False
                 st.session_state.nav_signal_filter = "All signals"
                 if hasattr(st.session_state, "nav_flow"):
@@ -1208,8 +1322,11 @@ elif view == "Review Queue":
         display_results = _apply_signal_filter(display_results, signal_filter)
 
         # Limit display
-        max_display = max(10, min(200, len(display_results)))
-        show_count = st.slider("Show top N", min_value=10, max_value=max(10, max_display), value=min(20, max_display))
+        max_display = min(200, len(display_results))
+        if max_display > 10:
+            show_count = st.slider("Show top N", min_value=10, max_value=max_display, value=min(20, max_display))
+        else:
+            show_count = max_display
         display_results = display_results[:show_count]
 
         if not display_results:
@@ -1230,12 +1347,13 @@ elif view == "Review Queue":
                 with col_sev:
                     st.markdown(f"### {severity_icon}")
                 with col_info:
-                    st.markdown(
-                        f"**#{r.convo_id}** · {r.flow.replace('_', ' ').title()} → {r.subflow.replace('_', ' ').title()}"
-                    )
-                    st.caption(issue)
+                    flow_label = r.flow.replace('_', ' ').title()
+                    subflow_label = r.subflow.replace('_', ' ').title()
+                    st.markdown(f"**#{r.convo_id}** · {flow_label}")
+                    st.caption(f"{subflow_label} · {issue}")
                 with col_score:
                     st.markdown(f"**{score_emoji} {score:.2f}**")
+                    st.caption("Overall")
                 with col_btn:
                     if st.button("Review →", key=f"review_{r.convo_id}"):
                         st.session_state.selected_review = r.convo_id

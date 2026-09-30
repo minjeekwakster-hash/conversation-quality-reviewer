@@ -16,22 +16,27 @@
 
 ## Farshad Samimi — Hiring Manager
 
-**Background**: PhD Computer Science (Michigan State, distributed systems). Serial founder (Contract Wrangler, acquired by Conga). Writes extensively on voice AI architecture.
+**Background**: PhD Computer Science (Michigan State, distributed systems — thesis: "Service Clouds: Overlay-Based Infrastructure for Autonomic Communication Services"). Founding product executive at Contract Wrangler (ML-native contract intelligence, backed by Venrock, acquired by Conga). Led AI/ML products at Conga post-acquisition.
 
-**His philosophy in his own words**: *"Vibes are not a strategy."* He benchmarks AI agents against live human performance across three dimensions: technical resilience, functional trust, and task efficiency. He wrote an entire blog post on the "demo-to-production gap" — how AI sounds impressive in demos but fails in production due to architectural weaknesses, not capability gaps.
+**His published thinking** (MUST READ these blog posts):
+- **["The Architecture of Trust"](https://www.asapp.com/blog/the-architecture-of-trust-engineering-the-frontier-of-enterprise-voice)** — Voice ensemble framework. Technical targets: **sub-400ms TTFA, P95 <800ms**. Three evaluation dimensions: **technical resilience, functional trust, task efficiency**. Discusses S2S collapsing cascades into "a single, unified neural loop." This reveals what he cares about: trust, latency, robustness.
+- **["The Autonomous Agentic Lifecycle"](https://www.asapp.com/blog/the-autonomous-agentic-life-cycle-how-the-asapp-cxp-flywheel-works)** — The five CXP agents (Discovery → Developer → Simulation → Optimization → Insights) form a **flywheel**. Auto-optimization example: IMEI verification failure detected, fixed, and verified automatically. He thinks in **systems and feedback loops** — frame your prototype as a component in this flywheel, not a standalone tool.
+
+**His philosophy in his own words**: *"Vibes are not a strategy."* He benchmarks AI agents against live human performance across three evaluation dimensions from "Architecture of Trust": technical resilience, functional trust, and task efficiency. Your five signals cover functional trust and task efficiency; operational metrics cover technical resilience.
 
 **What he'll probe**:
-- **Evaluation rigor**: How do you know the scores are accurate? He'll want to hear about calibration methodology (Cohen's kappa, inter-annotator agreement), not just "the LLM scores it." Be ready to explain the rubric embedded in each signal's prompt and how you'd validate it with human reviewers.
+- **Evaluation rigor**: How do you know the scores are accurate? He'll want to hear about calibration methodology (Cohen's kappa, inter-annotator agreement), not just "the LLM scores it." In your hiring manager interview, he pushed for "did you do any testing?" on voice cloning and "how did you test latency?" — he wants **concrete specifics**, not frameworks.
+- **Flywheel thinking**: He'll want to see how your prototype fits into the CXP lifecycle. Quality scoring → feeds Optimization Agent → drives improvement → measured by Insights Agent. Your tool is the measurement layer that makes the flywheel work.
 - **Production architecture**: He thinks in layers and systems. Show the separation of concerns (ingest → engine → API → dashboard). He'll appreciate that the API is the real product and the dashboard is one consumer.
-- **Context engineering**: He wrote a piece arguing context management is a competitive advantage you own. He'll care about how you structured prompts and rubrics for the LLM judge — not just which model you picked.
 - **Cost consciousness**: He'll test whether you understand ASAPP's "cost-efficient AI at scale" positioning. Have the tiered scoring cost table ready ($3/day at 1K vs $200/day at 100K).
-- **The "natural vs. reliable" tradeoff**: For voice specifically, he sees tension between models that sound natural and models that follow instructions reliably. Analogize this to the LLM judge: the tradeoff between nuanced, context-aware scoring and deterministic, reproducible results.
+- **Scaling, not prototyping**: In your hiring manager interview, he redirected you twice from the prototype story to scaling. Lead with 1-to-N, not 0-to-1.
 
 **What to emphasize for him**:
-- The tiered scoring architecture (heuristic on all, LLM on flagged + sample)
+- The tiered scoring architecture (heuristic on all, LLM on flagged + sample) — "mirrors how the CXP cascade works"
 - Why Sonnet over Opus (cost/speed alignment with ASAPP philosophy)
 - The single-API-call-per-signal design (3 calls per conversation, not 90)
-- How you'd run a calibration sprint with a customer's QA team
+- How the quality reviewer fits into his flywheel (measurement layer feeding optimization)
+- Reference his blog posts by name — shows you did your homework on the company AND on him
 
 **Likely hardest question**: *"Your LLM judge gives this conversation a 0.72 on compliance. A human reviewer gives it 0.45. Who's right, and what do you do about it?"*
 
@@ -39,7 +44,7 @@
 
 ## Connor McNabb — Design
 
-**Background**: Senior Director of Product Design. Career arc from copywriting/branding (Huge agency) → fintech UX (Betterment) → enterprise AI UX (ASAPP). Named inventor on an ASAPP speech processing patent (stochastic future context). Gave a talk on "Design system APIs and the developer experience."
+**Background**: Senior Director of Product Design. **8+ years at ASAPP** — one of the longest-tenured people on the panel (since Sep 2018). Career arc from copywriting/branding (Huge agency) → fintech UX (Betterment) → enterprise AI UX (ASAPP). Co-inventor on ASAPP patent for **"Vector-space representations of graphical user interfaces"** (filed Aug 2023, granted Sep 2025) — suggests he thinks about UI design as a systematic, computational discipline, not just aesthetics. Previously Staff Product Designer at Betterment.
 
 **What he'll evaluate**:
 - **User journey, not feature list**: Walk through the QA Manager's morning. "She opens the dashboard at 7:30 AM, sees 8 hard blocks — that's 4 fewer than yesterday. She clicks Refund, lands on the 5 compliance-flagged conversations, reviews the first one..." This narrative is more compelling than "this page has KPI cards."
@@ -61,16 +66,23 @@
 
 ## Nimrod Broshy — Adjacent Product Leader (Supervisor Suite)
 
-**Background**: Director of PM at ASAPP, owns the Supervisor Suite. Previously VP Product at SundaySky (personalized video platform), started as an engineer at Intel in Israel. BSc from Ben-Gurion University. Authored ASAPP's Insights Agent launch and a blog post explicitly arguing that **containment rate is a flawed metric**.
+**Background**: Director of PM at ASAPP, owns the **Supervisor Suite** — the product family giving enterprises visibility and control over AI-driven interactions. This is the exact product suite your prototype fits into. Previously General Manager at SundaySky. BSc from Ben-Gurion University (Israel).
 
-**His published philosophy**: Goal Completion > Containment Rate. He uses the example of an AI agent confidently giving wrong baggage policy info — it "contains" the call (looks like success) but actually harms the customer. He advocates for multi-dimensional quality scoring across: goal achievement, accuracy, naturalness, friction, and escalation appropriateness.
+**His published thinking** (MUST READ these blog posts):
+- **["Moving beyond containment"](https://www.asapp.com/blog/moving-beyond-containment-how-to-truly-measure-the-performance-of-your-ai-agent)** — Argues containment rate is a vanity metric. Proposes a holistic scoring model: **Goal Completion, Accuracy & Guardrails, Deep Observability, Conversation Fluency, Customer Friction, Escalation Appropriateness**. Your 5 signals map to this:
+  - Resolution → Goal Completion
+  - Compliance → Accuracy & Guardrails
+  - Sentiment → Customer Friction
+  - Communication → Conversation Fluency
+  - Efficiency → (his framework emphasizes observability over raw efficiency)
+- **["Introducing Insights Agent"](https://www.asapp.com/blog/your-contact-center-is-sitting-on-a-goldmine-introducing-insights-agent)** — He built a product that does exactly what your prototype does: analyzes 100% of interactions, surfaces patterns with evidence, returns results "in plain language backed with real customer quotes." Your prototype is a mini Insights Agent.
 
 **What he'll probe**:
-- **Outcome-oriented metrics**: Your Resolution signal maps directly to his "Goal Completion" concept. He'll love this. Be ready to explain why Resolution gets the highest weight (0.30) and how it differs from mere "containment."
-- **Observability and explainability**: Can the QA Manager see WHY a conversation scored low? He demands transparency into agent reasoning. Your evidence quotes, flagged utterances, and compliance checklists directly address this.
+- **Outcome-oriented metrics**: Your Resolution signal maps directly to his "Goal Completion" concept. Use his vocabulary — say "goal completion" alongside "resolution." Be ready to explain why Resolution gets the highest weight (0.30) and how it differs from mere "containment."
+- **Deep observability**: Not just "what scored low" but WHY. He demands transparency into agent reasoning. Your evidence quotes, flagged utterances, and compliance checklists directly address this. Use his term: "observability."
 - **Feedback loops**: He wrote that guardrails must create feedback loops. He'll ask how the system improves over time. Talk about the calibration loop (human reviews → measure agreement → tune rubric), and how the disabled "Add Feedback" button becomes the anchor for that loop.
-- **Scale of coverage**: His Insights Agent processes every conversation, not samples. He'll appreciate the tiered approach (heuristic on 100%, LLM on flagged + sample) — it's the same philosophy his product uses.
-- **Actionability for supervisors**: His entire product org exists to help supervisors and QA managers act on insights. Your Review Queue with priority sorting, Key Insights TL;DR, and cross-view navigation directly serve his user.
+- **Scale of coverage**: His Insights Agent processes every conversation, not samples. He'll appreciate the tiered approach (heuristic on 100%, LLM on flagged + sample) — it's the same philosophy. Say "100% of interactions" — that's ASAPP's and CoachingAI's language.
+- **Supervisor workflows**: His entire product org exists to help supervisors and QA managers act on insights. Your Review Queue with priority sorting, Key Insights TL;DR, and cross-view navigation directly serve his user. Your dashboard is essentially a simplified version of the Supervisor Suite's **Conversation Explorer** — acknowledge this.
 
 **What to emphasize for him**:
 - The 5 signals map almost 1:1 to his published quality framework
@@ -84,7 +96,7 @@
 
 ## Brian King — Engineering (Voice Infrastructure)
 
-**Background**: Senior Software Engineering Manager at ASAPP, leading voice infrastructure. Career arc: Avaya (10+ years, enterprise telephony/SIP) → Pindrop (voice fraud detection/authentication) → ASAPP (Solutions Architect → Staff → Engineering Manager → Senior Engineering Manager). Deep in FreeSWITCH, OpenSIPS, RTPengine, SIP, and the ASR → LLM → TTS pipeline.
+**Background**: Senior Software Engineering Manager at ASAPP, leading voice infrastructure. **5+ years at ASAPP** exclusively on voice infra (Jun 2019 → present), progressing: Voice Solutions Architect → Staff Voice Solutions Architect → Software Engineering Manager → Senior Manager. Career arc: Avaya (10+ years, enterprise telephony/SIP) → **Pindrop** (voice fraud detection/authentication — this means he knows voice security deeply; don't hand-wave PII or auth with him) → ASAPP. Deep in FreeSWITCH, OpenSIPS, RTPengine, SIP, and the ASR → LLM → TTS pipeline.
 
 **What he'll probe**:
 - **System architecture**: He builds production infrastructure. He'll want to understand the data flow: How does a conversation get from the telephony system → transcript → scoring engine → API → dashboard? Your architecture diagram (ingest → engine → API → dashboard) should be clear.
@@ -107,9 +119,9 @@
 
 ## Gabe Maggiotti — ML Engineering
 
-**Background**: Director of ML Engineering at ASAPP, managing a team of ~22 ML engineers. Argentine (ITBA-educated). Career: MercadoLibre → Artear (media) → Jampp (ad-tech) → ASAPP. Published at NeurIPS WANT Workshop on DYAD (making Transformer layers 7-15% faster while maintaining 90%+ performance). Completed coursework at MIT (Quantum Physics), Georgia Tech (ML), and Stanford (Deep Learning). Active GitHub with 33 repos.
+**Background**: Director of ML Engineering at ASAPP, managing a team of ~22 ML engineers. Argentine (ITBA-educated). Career: MercadoLibre → Artear (media) → Jampp (ad-tech) → ASAPP. Co-authored **DYAD paper at NeurIPS 2023** — "Efficient Approximation to Linear Layers" — making Transformer layers 7-15% faster while maintaining 90%+ performance. Also published on hallucination detection and factual inconsistency detection (both directly relevant to your LLM-as-judge approach). Completed coursework at MIT, Georgia Tech (ML), and Stanford (Deep Learning).
 
-**His core belief**: Efficiency is everything. The DYAD paper is literally about making neural networks cheaper and faster without sacrificing quality. This maps directly to ASAPP's value proposition.
+**His core belief**: Efficiency is everything. The DYAD paper is literally about making neural networks cheaper and faster without sacrificing quality. This maps directly to ASAPP's value proposition and to your Sonnet-over-Opus decision. His team also published **"Enhancing Hallucination Detection through Perturbation-Based Synthetic Data Generation"** (ACL 2024) — he'll be deeply interested in how you handle LLM judge hallucinations in scoring.
 
 **What he'll probe**:
 - **LLM-as-judge design**: He'll drill into the actual prompt design. How is the rubric structured? What's in the system prompt vs. user prompt? How do you enforce structured JSON output? How do you handle when the LLM returns malformed JSON?
@@ -143,8 +155,16 @@
 
 ### Potential Tension Points
 - **Gabe may push for more ML sophistication** (per-turn models, fine-tuned classifiers) while **Farshad will value pragmatic cost-efficiency**. Your tiered approach is the right answer for both.
-- **Connor may question the Coaching Pattern Map scatter plot** (not actionable for daily use) while **Nimrod may defend it** (useful for supervisor insights). Know your position.
+- **Connor may question the Failure Pattern Map scatter plot** (not actionable for daily use) while **Nimrod may defend it** (useful for supervisor insights). Know your position: it reveals systemic failure patterns by call reason, but without agent IDs it can't drive coaching. Honest framing.
 - **Brian may ask about voice features** that are out of scope. Don't get pulled into building voice — acknowledge it, reference tradeoffs.md, and redirect to the text prototype's strengths.
+- **Nimrod may compare your prototype to Conversation Explorer or Insights Agent** — products he owns. Don't pretend you invented the concept. Say "this is inspired by the same philosophy" and focus on what your prototype demonstrates about your product judgment, not that you built something novel.
+
+### Product Connections to Drop Naturally
+- "This prototype is essentially a mini Insights Agent — scoring 100% of interactions and surfacing patterns with evidence."
+- "The Review Queue is similar in spirit to Conversation Explorer — transcripts with reasoning plus a quality tab for flagged interactions."
+- "The signal framework maps to CoachingAI's three pillars — compliance maps to Automatic Compliance, resolution and communication map to Topic Mastery."
+- "The tiered scoring pipeline mirrors the CXP flywheel — cheap signals discover, expensive signals refine, results feed back into optimization."
+- "Farshad, your 'Architecture of Trust' blog describes three evaluation dimensions — technical resilience, functional trust, and task efficiency. My five signals cover functional trust and task efficiency; the operational metrics I'd add in production cover technical resilience."
 
 ### The Meta-Question They're All Asking
 Each panelist phrases it differently, but they're all evaluating the same thing:
@@ -157,10 +177,22 @@ Your strongest signal: the **"Talk About, Don't Build"** strategy. It shows you 
 
 ## Quick Reference: What Each Person Will Appreciate Most
 
-| Panelist | Strongest Card to Play |
-|----------|----------------------|
-| **Farshad** | "Vibes are not a strategy" — your calibration loop and cost-efficiency analysis |
-| **Connor** | The QA Manager's morning journey — walkthrough the workflow, not features |
-| **Nimrod** | Resolution = Goal Completion, not containment. The 5 signals map to his published framework |
-| **Brian** | API-first design + what changes for voice. The architecture diagram |
-| **Gabe** | The hybrid compliance signal + cost per eval math. Single call per signal, not per turn |
+| Panelist | Strongest Card to Play | Blog/Work to Reference |
+|----------|----------------------|----------------------|
+| **Farshad** | "Vibes are not a strategy" — calibration loop, cost-efficiency, flywheel positioning | "Architecture of Trust", "Autonomous Agentic Lifecycle" |
+| **Connor** | QA Manager's morning journey — walkthrough the workflow, not features | His GUI patent (systematic design thinking) |
+| **Nimrod** | Resolution = Goal Completion, not containment. 5 signals map to his holistic scoring model | "Moving beyond containment", "Introducing Insights Agent" |
+| **Brian** | API-first design + what changes for voice + PII handling (Pindrop background) | His voice infra progression at ASAPP |
+| **Gabe** | Hybrid compliance signal + cost per eval math + LLM hallucination handling | DYAD paper (efficiency), hallucination detection paper |
+
+### ASAPP Vocabulary Cheat Sheet
+
+| Don't Say | Say Instead | Why |
+|-----------|-------------|-----|
+| Containment rate | Resolution / Goal Completion | Nimrod's core argument |
+| Monitoring | Observability | ASAPP's term across products |
+| Quality score | Holistic scoring | Nimrod's framework |
+| Analytics | Interaction Intelligence | ASAPP's product name |
+| Escalation/handoff | HILA (Human-in-the-Loop Agent) | ASAPP's model — collaboration, not fallback |
+| Pipeline | Flywheel | Farshad's framing for CXP lifecycle |
+| Sampling | 100% of interactions | CoachingAI's value prop language |

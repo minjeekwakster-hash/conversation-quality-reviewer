@@ -5,17 +5,73 @@
 
 ---
 
+## PART 0: WHO YOU ARE (10 minutes)
+
+### Structure
+
+This is the "tell us about yourself" segment. The panel knows your resume — don't recite it. Instead, tell the **scaling story** (Farshad's #1 interest), connect to **ASAPP's world**, and hit the four criteria Surai flagged: communication skills, voice experience, B2B enterprise, technical background.
+
+**Key insight from hiring manager interview**: Farshad redirected you twice from the prototype story to "how did you scale." Lead with scaling. He also pushed for concrete specifics on security and challenged your concurrency math. Be more technical this time.
+
+### Opening (1 min)
+
+> "Thanks everyone for having me. I'm Minji — my background sits at the intersection of technical product management and voice AI, most recently at Mudflap where I took our voice AI product from a prototype I built personally to a production system running 500-plus calls a day across four use cases."
+
+**Why lead with the number**: It signals 1-to-N, not just 0-to-1. Farshad wants to know you can scale, not just prototype.
+
+---
+
+### The Scaling Story (4 min)
+
+> "A quick walk through how that unfolded, because the scaling decisions are what I think are most relevant to this role.
+>
+> We started with a problem: high-intent customers who applied for our product but never activated. Our sales team didn't have the bandwidth to follow up. So I prototyped a voice AI agent — outbound calls to these dormant leads — using Vapi for orchestration, Cartesia for TTS, Deepgram Flux for STT, and GPT-4o Mini for reasoning. I chose that model specifically for latency — sub-1,200 milliseconds end-to-end, because our data showed that anything over 1.5 seconds triggered hang-ups.
+>
+> The prototype was rough. 60 percent hang-up rate on the first iteration. I worked through that systematically — personalized greetings by injecting CRM context so the bot said 'Hi Sarah' instead of a generic hello, agent-talks-first timing to hook the customer before they could decide it was spam, and keyword boosting in Deepgram to handle our users' accents in noisy environments. That brought hang-ups down to 10 percent.
+>
+> Once we proved 18 percent conversion on connected calls, I went to our CEO and got real resources — engineering headcount, a sales ops partner, and an enterprise vendor contract. That's where the scaling decisions started.
+>
+> On the vendor side, I evaluated Cartesia versus ElevenLabs for TTS. ElevenLabs had higher voice quality but sounded too polished for our customer base — truck drivers perceived it as robotic. Cartesia's voices had more natural imperfections that resonated better. For eval tooling, I specifically chose Future AGI over Braintrust and Langfuse because they could evaluate audio natively — not just transcribed text — which meant we could catch prosody and dead air issues that text-based evals completely missed.
+>
+> On the technical side, I built a four-stage deployment pipeline — test, staging with bot-to-bot simulation across 50 scenarios, pre-production, and production — with quality gates at each stage. If our golden set of annotated transcripts showed score regression beyond 5 points, the deployment stopped. That was non-negotiable.
+>
+> On the data and security side, I negotiated PII handling terms in the enterprise contract — specifically, a right-to-delete clause for call recordings and a commitment from the vendor not to train on our customer data. Beyond the contract, we implemented PII redaction in the transcript pipeline before anything hit our eval tools, so sensitive information like account numbers never left our boundary.
+>
+> We scaled from one use case at 200 calls per day to four use cases at 500-plus — outbound reactivation, inbound routing, appointment scheduling, and application status checks. The inbound system used Twilio for telephony and tool-called into our HubSpot CRM for real-time context."
+
+**Why this version is better than the Farshad interview**: It leads with scaling, gives concrete vendor evaluation specifics (he wanted that), gives a real security answer (PII redaction, not just contractual), and naturally hits voice depth without being asked.
+
+---
+
+### Why ASAPP (2 min)
+
+> "That experience is what drew me to ASAPP. At Mudflap, voice AI was one product within a larger platform. At ASAPP, voice is the core — you have a dedicated voice engineering team, a research team with its own C-level working on speech-to-speech models, your own streaming cascade architecture, and enterprise customers operating at a scale that's orders of magnitude beyond what I built.
+>
+> The scope of this role is also what excites me. It's not just voice in isolation — it's voice plus the adjacent agentic ecosystem. Telephony integrations with CCaaS platforms like Amazon Connect and Genesys, payments over voice, SIP connectivity, IVR routing. These are exactly the kinds of integration problems I ran into at Mudflap at a smaller scale — we had Twilio for telephony and HubSpot for CRM, but at ASAPP you're dealing with Fortune 500 contact centers where those integrations are the product.
+>
+> And the way product works here — hands-on, prototyping, influence-based rather than top-down authority — that's exactly how I operate. The case study I'm about to show you is a working prototype I built end to end, not a spec."
+
+**Why this matters**: It references specific things Farshad told you — S2S research, streaming cascade, adjacent ecosystem, CCaaS integrations, "PMs build" culture. Shows you listened and did your homework.
+
+---
+
+### Transition to Demo (30 sec)
+
+> "So with that context, let me show you what I built for the case study — a Conversation Quality Reviewer. I'll walk through the prototype, then the decisions behind it, and then I'd love to dig into the discussion."
+
+---
+
 ## PART 1: PROTOTYPE WALKTHROUGH (10 minutes)
 
 ### Opening (1 min)
 
-> "So the case study asked me to build a Conversation Quality Reviewer — ingest batch transcripts, compute quality signals, and surface the results through an API and dashboard.
+> "Farshad, you mentioned that PMs here build. So I built this.
 >
-> Before I open the prototype, I want to share the lens I used to build it. The first thing I did was define the user. I assumed a QA Manager at an airline contact center — someone like a JetBlue QA lead who spends most of her day manually sampling calls, coaching agents, and reporting quality trends to leadership. Today she reviews maybe 1 to 5 percent of conversations. The rest is a blind spot.
+> This is a Conversation Quality Reviewer — it ingests batch transcripts, computes five quality signals per conversation, and surfaces the results through a FastAPI API and this Streamlit dashboard. It's essentially a mini version of what CoachingAI does — automate quality evaluation for 100 percent of interactions so the QA Manager spends her time coaching, not reviewing. The signal framework maps to CoachingAI's pillars: compliance maps to Automatic Compliance, resolution and communication map to Topic Mastery. And the Review Queue is similar in spirit to what Nimrod's team built with Conversation Explorer — transcripts plus reasoning plus a quality tab for flagged interactions.
 >
-> So the question I kept asking myself for every feature was: what does the QA Manager actually do with this? If I couldn't answer that, I didn't build it. That filter shaped everything you're about to see."
+> The lens I used to build everything: I defined the primary user as a QA Manager at an airline contact center — someone like a JetBlue QA lead who manually samples maybe 1 to 5 percent of conversations. The rest is a blind spot. Every feature had to answer one question: what does the QA Manager do with this information? If I couldn't answer that, I talked about it in the tradeoffs note instead of building it."
 
-**Why this opening works**: It signals persona-driven thinking (for Connor), outcome orientation (for Nimrod), and production discipline (for Farshad) — all before showing a single screen.
+**Why this opening works**: It directly references Farshad's words (rapport), connects to CoachingAI (shows ASAPP knowledge), signals persona-driven thinking (for Connor), outcome orientation (for Nimrod), and the "talk about, don't build" discipline (for Farshad). All in 45 seconds.
 
 ---
 
@@ -49,9 +105,9 @@
 
 ### Stop 3: Signal Breakdown & Supporting Visuals (1 min)
 
-> "Below the table, there's a horizontal bar chart showing average scores across the five signals — Resolution, Compliance, Efficiency, Sentiment, and Communication. This helps the QA Manager see which dimension is the weakest across the board.
+> "Below the table, there's a horizontal bar chart showing average scores across the five signals — Resolution, Compliance, Efficiency, Sentiment, and Communication. If I use Nimrod's framework from his 'Beyond Containment' blog, these map to Goal Completion, Accuracy and Guardrails, task efficiency, Customer Friction, and Conversation Fluency.
 >
-> I also included a score distribution histogram and a coaching pattern map — the scatter plot of efficiency versus quality. I'll be honest — I debated whether these belong here. The histogram and scatter plot are more analytical than actionable. A QA Manager doesn't look at a scatter plot at 7:30 in the morning. But they're useful for a weekly review or when she's building a case for leadership. If I had another week, I'd probably move them to a separate analytics view and keep the main page focused on the table and KPIs."
+> There's also a Quality Trend line chart showing daily average quality over time — so the QA Manager can see if quality is improving or degrading — and a Failure Pattern Map plotting Resolution against Compliance with quadrant shading. Each quadrant tells the QA Manager what to do: policy gap means retrain on process, resolution gap means fix the tools or knowledge base, both failing means escalate. I'll be honest — the failure pattern map is more useful for weekly reviews than daily triage. If I had another week, I'd move it to a secondary analytics view and keep the main page focused on the table, KPIs, and trend line."
 
 **Why this candor works**: It shows design maturity — knowing what to build, what not to build, and being honest about where the line is. Connor will appreciate this. Farshad will see it as production thinking.
 
@@ -79,13 +135,17 @@
 
 ---
 
-### Stop 5: Architecture & Tradeoffs (1 min)
+### Stop 5: Architecture, Scale & What I Chose Not to Build (2 min)
 
 > "Under the hood, the architecture is straightforward. Conversations come in, go through an ingest layer, hit a scoring engine that runs five signal computers, and the results are served through a FastAPI API. The dashboard is just one consumer of that API — a customer could build their own integration, pipe scores into their existing tools, whatever works for them.
 >
 > One design choice I want to highlight: I use three LLM calls per conversation, not ninety. Instead of scoring each turn individually, each signal gets a single call with the full conversation context. That's a deliberate cost decision — at scale, the difference between 3 and 90 API calls per conversation is the difference between viable and not viable.
 >
-> And I tier the scoring: heuristics run on every conversation for free — turn count, action sequence matching. LLM scoring only runs on flagged conversations plus a random sample. At 100K conversations a day, that's about $200 a day instead of $1,500."
+> And I tier the scoring: heuristics run on every conversation for free — turn count, action sequence matching. LLM scoring only runs on flagged conversations plus a random sample. At 100K conversations a day, that's about $200 a day instead of $1,500. That mirrors how ASAPP's cascade architecture already works — cheap models filter, expensive models refine. And it fits into the CXP flywheel Farshad wrote about — quality scoring is the measurement layer that feeds the Optimization and Insights agents.
+>
+> Now let me call out what I deliberately chose NOT to build. No human feedback loop — because calibration requires labeled data from real QA teams, not synthetic examples. No agent-level aggregation — because the ABCD dataset doesn't have agent IDs, and building it without real data would be dishonest. No real-time scoring — because this is a batch QA review tool; the QA Manager reviews after the fact. ASAPP's streaming cascade handles real-time, and this would complement it as the post-call analysis layer. No voice or audio features — because this is text-only, but the signal framework is designed so you can swap text-based signal computers for audio-based ones when the input changes.
+>
+> I'd rather talk about these decisions than build half-baked versions — because knowing what not to build is as much a product decision as knowing what to build."
 
 **Decision to highlight if asked**: "The API is the real product. The dashboard is a view. That matters because enterprise customers — especially airlines and telecoms — have their own dashboards, their own BI tools. If the quality reviewer is locked behind one UI, it's not useful. The API-first design means it fits wherever the customer already works."
 
@@ -93,7 +153,7 @@
 
 ### Closing the Demo (30 sec)
 
-> "That's the prototype. Let me quickly mention what I chose not to build but would want to talk about — human feedback and calibration loops, agent-level aggregation and coaching workflows, regression detection over time, and how this changes when you move from text to voice. Happy to dig into any of these."
+> "That's the prototype and the decisions behind it. I'd love to dig into any of this — the signals, the architecture, what changes for voice, what I'm unsure about, or how this would fit into ASAPP's platform."
 
 ---
 
@@ -162,6 +222,8 @@ Questions are organized by topic, not by panelist — because in a 5-person pane
 
 > "I started by asking what the QA Manager actually coaches on. When I looked at how quality evaluation works in contact centers, it almost always breaks down into: did you solve the problem, did you follow the rules, were you efficient, how did the customer feel, and how well did you communicate. Those are the five.
 >
+> I actually found strong validation for these choices after reading Nimrod's blog post on moving beyond containment. He proposes a holistic scoring model — Goal Completion, Accuracy and Guardrails, Deep Observability, Conversation Fluency, Customer Friction. My Resolution maps to Goal Completion, Compliance to Accuracy and Guardrails, Communication to Conversation Fluency, Sentiment to Customer Friction. It was encouraging to see the alignment.
+>
 > I could have added more — agent knowledge accuracy, customer effort score, escalation appropriateness. But more signals doesn't mean better. Each signal you add is another thing the QA Manager has to understand, trust, and act on. Five is already a lot. I'd rather have five well-calibrated signals than eight where three are mediocre.
 >
 > If I were building this at ASAPP, the specific signals might shift based on what the customer cares about. An airline might weight compliance way higher than a retailer because of regulatory requirements. A telecom might want a dedicated 'upsell appropriateness' signal. The framework is designed to be extensible — you can add or swap signal computers without changing the architecture."
@@ -217,11 +279,13 @@ Questions are organized by topic, not by panelist — because in a 5-person pane
 **Q10: "How would this plug into ASAPP's existing platform?"**
 *Likely from: Brian*
 
-> "The API is the integration surface. The dashboard is just one consumer — it hits the same endpoints any other system would. A customer could pipe the quality scores into their existing BI tool, their workforce management system, or their own internal dashboards.
+> "The API is the integration surface. The dashboard is just one consumer — it hits the same endpoints any other system would. A customer could pipe quality scores into their existing BI tool, their workforce management system, or ASAPP's own Interaction Intelligence layer.
 >
-> The API contract is clean — you send conversation IDs, you get back structured scores with evidence and reasoning. It's a FastAPI service with well-defined request and response models. In ASAPP's world, this would sit alongside the existing conversation pipeline — conversations come in through telephony, get transcribed, and the quality scorer processes them asynchronously. The scores land in whatever data store ASAPP uses and flow into the Supervisor Suite or whatever customer-facing surface makes sense.
+> The API contract is clean — you send conversation IDs, you get back structured scores with evidence and reasoning. In ASAPP's world, this sits within the CXP flywheel that Farshad wrote about. Conversations come in through telephony, flow through the streaming cascade during the call, and after the call ends, the quality reviewer picks up the transcript asynchronously. Scores feed back into the Optimization Agent for continuous improvement and into the Insights Agent for pattern detection. The Supervisor Suite — Nimrod's domain — consumes those scores through Conversation Explorer for the supervisor's review workflow.
 >
-> One thing I was intentional about: the quality reviewer doesn't own the conversation data. It reads transcripts and writes scores. It doesn't need to know about the telephony stack, the ASR pipeline, or the agent routing. That separation means it can plug in without disrupting anything."
+> In ASAPP's integrations ecosystem, the quality scorer becomes an MCP server that any agent or tool can invoke. The Developer Agent could use it as a test harness when building new workflows. The Simulation Agent could use it to validate quality before deployment.
+>
+> One thing I was intentional about: the quality reviewer doesn't own the conversation data. It reads transcripts and writes scores. It doesn't need to know about the telephony stack, the ASR pipeline, or the agent routing. That separation means it plugs into the platform without disrupting anything."
 
 ---
 
@@ -267,7 +331,7 @@ Questions are organized by topic, not by panelist — because in a 5-person pane
 **Q14: "If you had another week, what would you change about the UX? What would you remove?"**
 *Likely from: Connor*
 
-> "Honestly, I'd remove more than I'd add. The scatter plot — the coaching pattern map — I'd pull out of the main view. It's interesting for a quarterly review but the QA Manager doesn't need it at 7:30 AM. Same with the score distribution histogram. They're not actionable enough for daily use.
+> "Honestly, I'd remove more than I'd add. The Failure Pattern Map — the resolution-vs-compliance scatter — is useful for quarterly pattern analysis but the QA Manager doesn't need it at 7:30 AM. I'd move it to a secondary analytics view.
 >
 > What I'd add: first, I'd redesign the coaching pattern into an agent-level view where you can see individual agents' performance over time. Right now the dataset doesn't have agent IDs so I couldn't build it, but that's where the real coaching value lives. Second, I'd add the feedback loop — a way for the QA Manager to say 'I disagree with this score, here's what I think it should be.' Right now there's a disabled feedback button that's a placeholder for that. Third, I'd add a simple export — let her generate a weekly summary report she can send to leadership without leaving the dashboard.
 >
@@ -295,6 +359,33 @@ Questions are organized by topic, not by panelist — because in a 5-person pane
 
 ---
 
+### TOPIC 4B: VOICE & SPEECH-TO-SPEECH
+
+**Q28: "Tell me about speech-to-speech models and how they relate to what ASAPP is building."**
+*Likely from: Brian, Farshad, Gabe*
+
+> "Today, voice AI runs on a cascade — audio comes in, ASR converts it to text, the LLM reasons over the text, TTS converts the response back to audio. Three separate models chained together. That's what ASAPP runs in production right now with AutoTranscribe plus their GenerativeAgent.
+>
+> The cascade works, but it has tradeoffs. Each stage adds latency — you're looking at 1 to 3 seconds end-to-end. And you lose information at the ASR step. Tone, hesitation, emphasis — all the paralinguistic signals that tell you how someone feels, not just what they said. A customer can say 'that's fine' in a way that clearly means it's not fine, and the text transcript loses that entirely.
+>
+> Speech-to-speech models collapse that cascade into a single model that takes audio in and produces audio out directly. No intermediate text. That means sub-400ms latency — which is within the natural human response window — and you preserve all the acoustic information.
+>
+> ASAPP is actively working on this. Their DiscreteSLU paper at Interspeech 2024 shows they're integrating speech directly into LLMs using discrete speech units — that's a stepping stone toward full S2S. And their 'Architecture of Trust' blog explicitly says they're building native S2S to collapse the cascade into 'a single, unified neural loop.'
+>
+> The reason the cascade still dominates in production is practical. Tool use, function calling, compliance guardrails — all of that is solved in the text layer. S2S embeds reasoning in trained weights, so upgrading the model means expensive end-to-end retraining. For enterprise customers handling millions of calls with regulatory requirements, debuggability matters.
+>
+> The PM question — which is what this role would own — is when and how to transition. It's not a flip-the-switch moment. You'd run them in parallel, validate S2S quality against the cascade, and migrate use cases incrementally. The job listing actually calls this out — it says the voice PM owns 'the underlying model bets.'"
+
+**If they ask "How does S2S affect quality scoring?"**
+
+> "It's actually a big opportunity for what I built. Right now, the quality scorer works on text transcripts — which means ASR errors propagate into the scores. If the transcript says the agent said something they didn't actually say, the compliance and resolution scores can be wrong.
+>
+> With S2S, you could score directly from audio. The signal framework stays the same — you're still measuring resolution, compliance, efficiency, sentiment, communication. But the inputs change. Sentiment gets way richer — you're reading tone, not just words. Efficiency shifts from turn count to handle time, dead air, and hold time. Communication picks up filler words, speech rate, interruptions.
+>
+> And you eliminate the transcription error layer entirely. That's a meaningful accuracy improvement for quality scoring."
+
+---
+
 ### TOPIC 5: HYBRID COMPLIANCE & SIGNAL ARCHITECTURE
 
 **Q17: "Tell me more about the hybrid compliance signal. How does the heuristic and LLM work together?"**
@@ -315,11 +406,11 @@ Questions are organized by topic, not by panelist — because in a 5-person pane
 
 > "Three things, in order.
 >
-> First, the human feedback loop. That disabled 'Add Feedback' button isn't decoration — it's the anchor for the most important feature the product needs. When the QA Manager disagrees with a score, she should be able to correct it. Those corrections become training data for calibration. Over time, you measure LLM-vs-human agreement and tune the rubrics based on where they disagree. Without that loop, the system doesn't improve.
+> First, the human feedback loop — or what ASAPP calls the HILA philosophy applied to quality evaluation. That disabled 'Add Feedback' button isn't decoration — it's the anchor for the most important feature the product needs. When the QA Manager disagrees with a score, she should be able to correct it, the same way a HILA supervisor provides targeted guidance that the AI learns from. Those corrections become calibration data. Over time, you measure LLM-vs-human agreement and tune the rubrics. Without that loop, the system doesn't improve — and that feedback loop is what makes the CXP flywheel actually spin.
 >
-> Second, agent-level aggregation. Right now this is conversation-level — you see individual conversations. But the QA Manager coaches agents, not conversations. She needs to see: 'Agent Sarah averages 0.82 overall but 0.55 on compliance in refund calls.' That's a specific, actionable coaching target. The dataset I used didn't have agent IDs, so I couldn't build this, but the data model supports it — you'd add an agent identifier to each conversation result and aggregate up.
+> Second, agent-level aggregation. Right now this is conversation-level — you see individual conversations. But the QA Manager coaches agents, not conversations. She needs to see: 'Agent Sarah averages 0.82 overall but 0.55 on compliance in refund calls.' That's a specific, actionable coaching target. This is what CoachingAI already does with its three pillars — Automatic Compliance, Topic Mastery, Tool Mastery — but aggregated to the agent level. The dataset I used didn't have agent IDs, so I couldn't build this, but the data model supports it.
 >
-> Third, regression detection. When you push a new prompt, change a model, or update a compliance rubric, scores shift. You need to know whether they shifted intentionally or broke something. That's a monitoring problem — track score distributions over time and alert on unexpected changes.
+> Third, regression detection. When you push a new prompt, change a model, or update a compliance rubric, scores shift. You need to know whether they shifted intentionally or broke something. That maps to the Simulation Agent's role in the CXP lifecycle — validate before you ship, and monitor after you ship.
 >
 > At Mudflap, we learned this the hard way. We built our voice AI eval system in phases, and the biggest unlock wasn't the initial scoring — it was the feedback loop. When our QA team could flag issues and we could see them the next day in the metrics, the iteration speed went from weeks to hours."
 
@@ -414,9 +505,9 @@ Questions are organized by topic, not by panelist — because in a 5-person pane
 **Q25: "If a customer says 'I don't trust AI scoring — my QA team should be the source of truth,' how do you respond?"**
 *Likely from: Nimrod, Farshad*
 
-> "They're right — and that's actually how the system should work. The QA team is the source of truth. The AI scoring is there to extend their reach, not replace their judgment.
+> "They're right — and that's actually how the system should work. The QA team is the source of truth. The AI scoring extends their reach, not replaces their judgment. This is exactly the HILA philosophy ASAPP already uses — the human isn't a fallback, they're an embedded collaborator who makes the AI better.
 >
-> Think of it this way: the QA team manually reviews maybe 3 percent of conversations. The other 97 percent, nobody looks at. The AI scoring covers that 97 percent and surfaces the ones that are most likely to have issues. The QA team still reviews conversations, still makes the final call, and still does the coaching. They just spend less time finding problems and more time fixing them.
+> Think of it this way: the QA team manually reviews maybe 3 percent of conversations. The other 97 percent, nobody looks at. The AI scoring covers 100 percent of interactions and surfaces the ones that need attention. The QA team still reviews conversations, still makes the final call, and still does the coaching. They just spend less time finding problems and more time fixing them. That's the CoachingAI promise — move from 80 percent evaluating to 80 percent coaching.
 >
 > And the feedback loop makes this concrete. When the QA Manager disagrees with an AI score, that correction feeds back into calibration. Over time, the AI scoring aligns more closely with the QA team's standards. The QA team isn't being replaced — they're training the system.
 >
@@ -446,6 +537,89 @@ Questions are organized by topic, not by panelist — because in a 5-person pane
 
 ---
 
+### TOPIC 9: WALK THROUGH YOUR DECISIONS — BUILT, NOT BUILT, AND WHY
+
+*This directly addresses the case study prompt: "Walk through your decisions. What you built, what you chose not to build, and why."*
+
+**Q29: "Walk me through your major decisions. What did you build, what did you skip, and why?"**
+*Likely from: Farshad, anyone*
+
+> "Let me walk through the decision tree.
+>
+> I started with the user. I defined a QA Manager at an airline contact center as my primary persona — someone who reviews conversations daily, identifies coaching targets, and escalates systemic issues. That persona filtered everything. If a feature didn't answer 'what does the QA Manager do with this?' — I didn't build it.
+>
+> For signals, I chose five — resolution, efficiency, compliance, sentiment, and communication — because they map to the five questions contact center leaders actually ask: did we solve it, how much did it cost, did we follow the rules, is the customer happy, and is the agent coachable. I rejected agent knowledge accuracy because it overlaps with compliance, transfer rate because it's not in the ABCD data, and first-contact resolution because you can't determine it from a single transcript without session linking.
+>
+> For the scoring approach, I went hybrid. Efficiency is pure heuristic — turn count and action sequences are structural, a language model adds zero value over counting. Compliance is hybrid — the heuristic catches 80 percent of violations through action-sequence matching against the ABCD knowledge base, and the LLM handles justified deviations. The other three are LLM-based because semantic judgment is required. I deliberately chose Sonnet over Opus — structured scoring tasks don't need Opus-level reasoning, and at 5x the cost, defaulting to the most expensive model would contradict how ASAPP thinks about cost-efficient AI.
+>
+> For the dashboard, I built two views: Quality Summary for 'how are we doing' and Review Queue for 'which calls need attention.' I started with three views but the third — a standalone conversation detail — duplicated what the Review Queue already showed inline. So I cut it. That kind of subtraction is a product decision too.
+>
+> What I explicitly chose NOT to build: human feedback loops, because calibration requires labeled data from real QA teams. Agent-level aggregation, because the ABCD dataset lacks agent IDs and building it on fake data would be dishonest. Real-time scoring, because this is a batch QA review tool — ASAPP's streaming cascade handles real-time. Authentication and multi-tenancy, because they're infrastructure decisions, not product decisions, and spending 8 hours on auth would have been 8 hours not spent on the scoring framework.
+>
+> Each of those is documented in my decisions log with the rationale. I'd rather talk about these decisions credibly than build half-baked versions."
+
+---
+
+**Q30: "You said you chose Sonnet over Opus. Walk me through that decision more concretely."**
+*Likely from: Gabe, Farshad*
+
+> "Three factors. First, task fit — these are structured evaluation tasks: read a transcript, evaluate against criteria, return JSON. Sonnet handles that reliably. I'm not asking for creative reasoning or complex multi-step chains. Second, cost — Sonnet is about 1.5 cents per conversation for three LLM calls. Opus would be about 7.5 cents. At 10K conversations a day, that's $150 versus $750. Tiered with heuristic pre-filtering, Sonnet comes to about $25 a day. Third, and this is the one I care about most — ASAPP builds cost-efficient AI for Fortune 500 contact centers. Walking into this interview having defaulted to the most expensive model for everything would signal the opposite of how you think about AI at scale. I used Haiku as a screening option and Opus as a calibration tiebreaker — Sonnet is the production workhorse."
+
+---
+
+### TOPIC 10: WHAT I'D CHANGE, MEASURE, AND WHAT I'M UNSURE ABOUT
+
+*This directly addresses the case study prompt: "Talk tradeoffs. What you'd change for production, what you'd measure, what you're unsure about."*
+
+**Q31: "What would you change for production?"**
+*Likely from: Farshad, Brian*
+
+> "Five things, in priority order.
+>
+> First, tiered scoring pipeline. The prototype runs full LLM scoring on every conversation. At 100K per day that's $1,500. Production needs tiers — heuristics on everything, LLM on flagged plus a random sample. That's the same cascade philosophy ASAPP uses — cheap models filter, expensive models refine.
+>
+> Second, anchored rubrics. Right now my LLM signals define scoring dimensions but not calibrated score levels. In production, each score level gets 2 to 3 annotated example conversations from the customer's QA team, embedded as few-shot examples. That turns the LLM judge from directional to grounded.
+>
+> Third, persistent storage and async processing. Replace JSON file storage with Postgres, score conversations through a job queue, not synchronously per request.
+>
+> Fourth, agent-level aggregation. That's what transforms this from a conversation review tool into a coaching product — 'Agent Smith resolves 90 percent of cases but empathy is at 0.35, here are three example conversations.'
+>
+> Fifth, voice and audio signals. Text is where I started because the dataset is text. But for ASAPP's voice product, sentiment gets prosody analysis, efficiency shifts to handle time and dead air, communication picks up filler words and speech rate. The signal framework stays the same — you swap the signal computers."
+
+---
+
+**Q32: "What would you measure to know this is working?"**
+*Likely from: Gabe, Farshad*
+
+> "Five things.
+>
+> LLM-versus-human agreement — have three QA analysts score 200 conversations, measure Cohen's kappa per signal, target above 0.7. Where the LLM disagrees with consensus, tune the rubric. Where humans disagree with each other, tighten the signal definition.
+>
+> Score-CSAT correlation — if conversations scored as high quality consistently get low CSAT, the scoring framework is measuring the wrong thing. That's the external validation layer.
+>
+> Drift monitoring — run the golden set monthly and alert on distribution shifts. When Anthropic updates the model, scores can shift without you changing anything. You need to catch that.
+>
+> Operational metrics — latency per conversation, API error rate, cost per scored conversation. These are the health check on the pipeline itself.
+>
+> And the one that matters most and is hardest to measure: coaching effectiveness. Do agents who get coached based on these scores actually improve on those signals over time? If the scores are accurate but they don't lead to better outcomes, the product isn't working."
+
+---
+
+**Q33: "What are you unsure about? What keeps you up at night with this approach?"**
+*Likely from: anyone — this is a maturity test*
+
+> "Three things I'm genuinely unsure about.
+>
+> First, whether a composite quality score is even the right abstraction. I use it as a sorting heuristic for the queue, but collapsing five different dimensions into one number feels like it loses more than it gains. A conversation with 0.95 resolution and 0.30 compliance is very different from one with 0.60 across the board, but they might get the same composite score. I'm not sure a weighted average is the right aggregation — maybe it should be 'worst signal wins' for queue prioritization, or maybe the composite should be replaced entirely by a priority tier that's driven by the hard-block logic. I built it because QA managers expect a single number, but I'm not convinced it's the right design.
+>
+> Second, whether LLM-as-judge is stable enough for production quality scoring. Run-to-run variance is small — maybe plus or minus 0.03 — but model updates from Anthropic could shift scores across the board. That's manageable with golden sets, but it means you're maintaining an eval pipeline for your eval pipeline, which is a real operational cost. I'm not sure the maintenance burden scales gracefully to dozens of enterprise customers with different rubrics.
+>
+> Third, whether per-conversation scoring is even the right unit of analysis for the QA Manager's workflow. She coaches agents, not conversations. Without agent IDs, this tool tells her 'here are bad conversations' but not 'here's who needs coaching.' That agent-level aggregation is what transforms this from a search tool into a coaching product, and I'm unsure how much value the conversation-level view provides on its own without it."
+
+**Why this answer is strong**: It shows genuine uncertainty, not false humility. Each doubt is specific, reasoned, and reveals a deeper understanding of the problem. Farshad will respect this more than "I'd just add more features."
+
+---
+
 ### RAPID-FIRE REFERENCE (if questions come up you haven't rehearsed)
 
 | Topic | Key Point |
@@ -458,7 +632,13 @@ Questions are organized by topic, not by panelist — because in a 5-person pane
 | **Pre-computed scores** | 200 fully scored, 8K+ heuristic-scored, all precomputed so the demo is fast |
 | **Streamlit choice** | Fastest path to a working dashboard for a prototype — wouldn't use it in production |
 | **What I'd use in production** | React frontend, proper database (Postgres), message queue for async scoring |
-| **ASAPP's CoachingAI** | Moves QA from 80% evaluating → 80% coaching. My tool automates the evaluation part |
+| **ASAPP's CoachingAI** | Moves QA from 80% evaluating → 80% coaching. Three pillars: Automatic Compliance, Topic Mastery, Tool Mastery |
+| **Nimrod's framework** | "Beyond Containment" blog: Goal Completion, Accuracy & Guardrails, Observability, Fluency, Friction |
+| **Farshad's framework** | "Architecture of Trust" blog: technical resilience, functional trust, task efficiency |
+| **Devidas's framework** | Empirical (FCR, error rate, latency, learning velocity) + Experiential (CSAT, sentiment drift, trust signals) |
+| **CXP flywheel** | Discovery → Developer → Simulation → Optimization → Insights. Quality reviewer is the measurement layer |
+| **Conversation Explorer** | ASAPP's existing tool: transcripts + AI reasoning + quality tab. My Review Queue is similar in spirit |
+| **HILA** | Human-in-the-Loop Agent: embedded collaboration, not escalation. QA feedback loop follows same philosophy |
 | **Key Insights TL;DR** | Designed so the QA Manager can decide "do I need to dig deeper?" in 5 seconds |
 | **Master-detail layout** | Borrowed from email clients — familiar UX, zero learning curve |
 | **Why no agent-level view** | Dataset lacks agent IDs; talked about it, didn't build it — that's the right call for a prototype |
