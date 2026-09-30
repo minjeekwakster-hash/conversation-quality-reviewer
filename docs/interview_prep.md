@@ -255,7 +255,7 @@ Questions are organized by topic, not by panelist — because in a 5-person pane
 
 > "It's a cost-quality tradeoff that maps to ASAPP's positioning. Opus is the most capable, but at about five times the cost per call. For scoring quality signals — where the rubric is well-defined and the task is structured — Sonnet gives you 90-plus percent of the quality at a fifth of the price. Haiku is even cheaper, but in my testing the reasoning wasn't reliable enough for nuanced signals like resolution and compliance.
 >
-> The math: Sonnet costs about a cent and a half per conversation for three LLM signals. Opus would be about 7.5 cents. At 10K conversations a day, that's $150 versus $750. And with the tiered approach — heuristic on everything, LLM on maybe 15 percent — Sonnet brings it down to about $25 a day.
+> The math: Sonnet costs about three cents per conversation for four LLM signals — resolution, sentiment, communication, plus a compliance adjustment call. Opus would be about fourteen cents. At 10K conversations a day, that's $275 versus $1,400. And with the tiered approach — heuristic on everything, LLM on maybe 15 percent — Sonnet brings it down to about $41 a day.
 >
 > ASAPP builds cost-efficient AI at scale. Picking the most expensive model and running it on everything would be the opposite of that philosophy."
 
@@ -464,13 +464,13 @@ Questions are organized by topic, not by panelist — because in a 5-person pane
 **Q22: "Walk me through the cost per evaluation math."**
 *Likely from: Gabe, Farshad*
 
-> "Each conversation gets three LLM calls — resolution, sentiment, and communication. Compliance is hybrid so it has one LLM call for the adjustment. Efficiency is pure heuristic, so zero cost.
+> "Each conversation gets four LLM calls — resolution, sentiment, communication, and a compliance adjustment. Efficiency is pure heuristic, so zero cost.
 >
-> With Sonnet, each call costs roughly half a cent depending on conversation length — the input is the transcript plus the rubric prompt, the output is a structured JSON with scores and reasoning. So about 1.5 cents per fully-scored conversation.
+> With Sonnet, each call runs about 1,050 input tokens — the transcript plus the rubric prompt — and about 250 output tokens for the structured JSON with scores and reasoning. At Sonnet's pricing — $3 per million input, $15 per million output — that's about seven-tenths of a cent per call, so about 2.8 cents per fully-scored conversation.
 >
-> Multiply that out: at a thousand conversations a day, full LLM coverage is about $15 a day. With the tiered approach — heuristic on everything, LLM on about 15 percent — it's more like $3 a day.
+> Multiply that out: at a thousand conversations a day, full LLM coverage is about $28 a day. With the tiered approach — heuristic on everything, LLM on about 15 percent — it's more like $4 a day.
 >
-> At 100K conversations, which is the upper end for a big contact center, full coverage would be $1,500 a day. Tiered brings it to about $200. That's the kind of math that matters when you're selling to Fortune 500 customers who are doing a million conversations a month.
+> At 100K conversations, which is the upper end for a big contact center, full coverage would be $2,750 a day. Tiered brings it to about $413. That's the kind of math that matters when you're selling to Fortune 500 customers who are doing a million conversations a month.
 >
 > Compare that to the cost of manual QA — a QA analyst reviewing conversations full-time might cost $60K to $80K a year and covers maybe 20 to 30 conversations a day. The automated system covers 100 percent for a fraction of that cost."
 
@@ -576,7 +576,7 @@ Questions are organized by topic, not by panelist — because in a 5-person pane
 
 > "Five things, in priority order.
 >
-> First, tiered scoring pipeline. The prototype runs full LLM scoring on every conversation. At 100K per day that's $1,500. Production needs tiers — heuristics on everything, LLM on flagged plus a random sample. That's the same cascade philosophy ASAPP uses — cheap models filter, expensive models refine.
+> First, tiered scoring pipeline. The prototype runs full LLM scoring on every conversation — four calls at about three cents each, so at 100K per day that's $2,750. Production needs tiers — heuristics on everything, LLM on flagged plus a random sample, which brings it down to about $413 a day. That's the same cascade philosophy ASAPP uses — cheap models filter, expensive models refine.
 >
 > Second, anchored rubrics. Right now my LLM signals define scoring dimensions but not calibrated score levels. In production, each score level gets 2 to 3 annotated example conversations from the customer's QA team, embedded as few-shot examples. That turns the LLM judge from directional to grounded.
 >

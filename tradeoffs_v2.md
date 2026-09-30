@@ -28,10 +28,33 @@ The split matters for explainability. In regulated industries, "the rule caught 
 
 ## 2. What I'd Harden for Production
 
-**Tiered scoring pipeline.** The prototype runs full LLM scoring on every conversation. At 100K conversations/day, that's ~$1,500/day. Production needs tiers:
+**Tiered scoring pipeline.** The prototype scores every conversation with 4 LLM calls (Resolution, Sentiment, Communication, Compliance adjustment) plus 1 heuristic signal (Efficiency) — **~$0.028 per conversation** on Claude Sonnet. At scale, that compounds:
+
+**Cost per conversation by model:**
+
+| Model | Input $/1M | Output $/1M | Cost/Convo | Why Use It |
+|---|---|---|---|---|
+| Haiku | $1 | $5 | ~$0.009 | Screening & simple classifications |
+| **Sonnet** | **$3** | **$15** | **~$0.028** | **Production scoring (current)** |
+| Opus | $15 | $75 | ~$0.14 | Calibration tiebreakers & edge cases |
+
+**Cost at scale — full LLM vs. tiered:**
+
+| Daily Volume | Full LLM (Sonnet) | Tiered (15% LLM) | Heuristic Only |
+|---|---|---|---|
+| 1K convos | $28/day | ~$4/day | $0 |
+| 10K convos | $275/day | ~$41/day | $0 |
+| 50K convos | $1,375/day | ~$206/day | $0 |
+| 100K convos | $2,750/day | ~$413/day | $0 |
+
+*Basis: 4 LLM calls/convo × ~1,050 input tokens + ~250 output tokens per call. ABCD conversations average 24 turns / ~266 transcript tokens. Tiered assumes heuristic on 100%, LLM on flagged (~5%) + 10% random sample.*
+
+Production needs tiers:
 - **Tier 1 (100% of conversations):** Heuristic signals only — instant, no API cost, flags outliers.
-- **Tier 2 (flagged + 10% sample):** Full LLM scoring. Catches nuanced issues while keeping costs at ~$200/day for 100K conversations.
-- **Tier 3 (on-demand):** Deep analysis triggered by QA analysts reviewing specific conversations.
+- **Tier 2 (flagged + 10% sample):** Full LLM scoring. At 100K conversations/day, ~15K get LLM scoring → **~$413/day** with Sonnet.
+- **Tier 3 (on-demand):** Deep analysis triggered by QA analysts. Negligible volume.
+
+**Compare to manual QA:** A full-time QA analyst costs ~$60-80K/year and reviews ~20-30 conversations/day. The tiered automated system covers 100K conversations for ~$12K/month — less than one analyst's salary while covering 3,000x more conversations.
 
 This mirrors how ASAPP's cascade architecture already works — cheap models filter, expensive models refine.
 
